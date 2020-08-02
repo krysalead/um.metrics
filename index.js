@@ -1,6 +1,17 @@
 const { InfluxDB, Point } = require("@influxdata/influxdb-client");
 const { Kafka } = require("kafkajs");
 
+// listen to signal to finish
+
+process.on("SIGTERM", () => {
+  console.info("SIGTERM signal received.");
+  stop();
+});
+process.on("SIGINT", () => {
+  console.info("SIGINT signal received.");
+  stop();
+});
+
 // influx side
 
 const isFloat = (possibleFloatValue) => {
@@ -10,14 +21,20 @@ const isFloat = (possibleFloatValue) => {
 let writeApi;
 let counter = 0;
 const BUCKET_NAME = process.env.BUCKET_NAME || "functional";
+const ORGANIZATION = process.env.ORGANIZATION || "8e23967877953738";
+
+console.log("Influx ::Creating client for ", process.env.INFLUXDB_URL);
 
 const influxInstance = new InfluxDB({
   url: process.env.INFLUXDB_URL,
   token: null,
 });
-writeApi = influxInstance.getWriteApi("8e23967877953738", BUCKET_NAME);
+writeApi = influxInstance.getWriteApi(ORGANIZATION, BUCKET_NAME);
 
 const push = (type, name, value, tag, tagValue) => {
+  console.log(
+    `Influx :: Pushing ${type}, ${name}, ${value}, ${tag}, ${tagValue}`
+  );
   const dataPoint = new Point(type);
   if (tag != undefined && tagValue != undefined) {
     dataPoint.tag(tag, tagValue);
@@ -33,6 +50,7 @@ const push = (type, name, value, tag, tagValue) => {
   counter++;
   if (counter > 10) {
     counter = 0;
+    console.log(`Flushing...`);
     writeApi.flush();
   }
 };
@@ -78,7 +96,7 @@ consumer
           partition,
           topic,
         ]);
-        const metric = message.value;
+        const metric = JSON.parse(message.value.toString("utf8"));
         console.log("Kafka Consumer::Pushing metric", metric);
         push(
           metric.type,
@@ -90,3 +108,9 @@ consumer
       },
     });
   });
+
+stop = () => {
+  flush();
+  consumer.disconnect();
+  kafka.close();
+};
