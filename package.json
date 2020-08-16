@@ -2,15 +2,17 @@
   "name": "metrics",
   "version": "1.0.0",
   "description": "handle push of the metrics inside influxdb",
-  "main": "index.js",
+  "main": "index.mjs",
   "scripts": {
-    "start": "node index.js"
+    "start": "node --experimental-modules index.mjs",
+    "test": "node --experimental-modules ./test/influx.mjs"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
     "@influxdata/influxdb-client": "^1.5.0",
+    "@influxdata/influxdb-client-apis": "^1.6.0",
     "kafkajs": "^1.12.0"
   }
 }
